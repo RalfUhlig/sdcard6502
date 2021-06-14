@@ -21,11 +21,12 @@ reset:
   ldx #$ff
   txs
 
-  lda #PORTB_OUTPUTPINS   ; Set various pins on port A to output
+  lda #PORTB_OUTPUTPINS   ; Set various pins on port B to output
   sta DDRB
 
-  ; Let the SD card boot up, by pumping the clock with SD CS disabled
   jsr PRCRLF
+
+  ; Let the SD card boot up, by pumping the clock with SD CS disabled
   lda #'I'
   jsr print_char
 
