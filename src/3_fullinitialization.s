@@ -224,8 +224,14 @@ sd_sendcommand:
   lda (zp_sd_cmd_address,x)
   jsr print_hex
 
+  ; Supply some clock cycles before and after activating CS to ensure the sd card recognizes the change of CS.
+  ; See https://electronics.stackexchange.com/questions/303745/sd-card-initialization-problem-cmd8-wrong-response
+  lda #$ff
+  jsr sd_writebyte 
   lda #SD_MOSI           ; pull CS low to begin command
   sta PORTB
+  lda #$ff
+  jsr sd_writebyte
 
   ldy #0
   lda (zp_sd_cmd_address),y    ; command byte
@@ -253,8 +259,14 @@ sd_sendcommand:
   jsr print_hex
 
   ; End command
+  ; Supply some clock cycles before and after deactivating CS to ensure the sd card recognizes the change of CS.
+  ; See https://electronics.stackexchange.com/questions/303745/sd-card-initialization-problem-cmd8-wrong-response
+  lda #$ff
+  jsr sd_writebyte 
   lda #SD_CS | SD_MOSI   ; set CS high again
   sta PORTB
+  lda #$ff
+  jsr sd_writebyte
 
   pla   ; restore result code
   rts

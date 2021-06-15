@@ -56,8 +56,14 @@ reset:
   lda #$00
   jsr print_hex
 
+  ; Supply some clock cycles before and after activating CS to ensure the sd card recognizes the change of CS.
+  ; See https://electronics.stackexchange.com/questions/303745/sd-card-initialization-problem-cmd8-wrong-response
+  lda #$ff
+  jsr sd_writebyte
   lda #SD_MOSI           ; pull CS low to begin command
   sta PORTB
+  lda #$ff
+  jsr sd_writebyte
 
   ; CMD0, data 00000000, crc 95
   lda #$40
@@ -78,8 +84,14 @@ reset:
   pha
   jsr print_hex
 
+  ; Supply some clock cycles before and after deactivating CS to ensure the sd card recognizes the change of CS.
+  ; See https://electronics.stackexchange.com/questions/303745/sd-card-initialization-problem-cmd8-wrong-response
+  lda #$ff
+  jsr sd_writebyte
   lda #SD_CS | SD_MOSI   ; set CS high again
   sta PORTB
+  lda #$ff
+  jsr sd_writebyte
 
   ; Expect status response $01 (not initialized)
   pla
