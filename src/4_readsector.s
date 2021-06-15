@@ -41,8 +41,14 @@ reset:
   lda #':'
   jsr print_char
 
+  ; Supply some clock cycles before and after activating CS to ensure the sd card recognizes the change of CS.
+  ; See https://electronics.stackexchange.com/questions/303745/sd-card-initialization-problem-cmd8-wrong-response
+  lda #$ff
+  jsr sd_writebyte 
   lda #SD_MOSI
   sta PORTB
+  lda #$ff
+  jsr sd_writebyte 
 
   ; Command 17, arg is sector number, crc not checked
   lda #$51           ; CMD17 - READ_SINGLE_BLOCK
@@ -94,8 +100,14 @@ reset:
   bne .readloop
 
   ; End command
+  ; Supply some clock cycles before and after deactivating CS to ensure the sd card recognizes the change of CS.
+  ; See https://electronics.stackexchange.com/questions/303745/sd-card-initialization-problem-cmd8-wrong-response
+  lda #$ff
+  jsr sd_writebyte 
   lda #SD_CS | SD_MOSI
   sta PORTB
+  lda #$ff
+  jsr sd_writebyte 
 
   ; Print the last two bytes read, in hex
   lda $01 ; byte1
@@ -104,9 +116,9 @@ reset:
   jsr print_hex
 
 
-  ; loop forever
 loop:
-  jmp loop
+stop:
+  brk
 
 
 
