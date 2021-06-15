@@ -16,7 +16,7 @@ sd_init:
   ldx #160               ; toggle the clock 160 times, so 80 low-high transitions
 .preinitloop:
   eor #SD_SCK
-  sta PORTA
+  sta PORTB
   dex
   bne .preinitloop
   
@@ -125,12 +125,12 @@ sd_readbyte:
 .loop:
 
   lda #SD_MOSI                ; enable card (CS low), set MOSI (resting state), SCK low
-  sta PORTA
+  sta PORTB
 
   lda #SD_MOSI | SD_SCK       ; toggle the clock high
-  sta PORTA
+  sta PORTB
 
-  lda PORTA                   ; read next bit
+  lda PORTB                   ; read next bit
   and #SD_MISO
 
   clc                         ; default to clearing the bottom bit
@@ -162,9 +162,9 @@ sd_writebyte:
   ora #SD_MOSI
 
 .sendbit:
-  sta PORTA                   ; set MOSI (or not) first with SCK low
+  sta PORTB                   ; set MOSI (or not) first with SCK low
   eor #SD_SCK
-  sta PORTA                   ; raise SCK keeping MOSI the same, to send the bit
+  sta PORTB                   ; raise SCK keeping MOSI the same, to send the bit
 
   tya                         ; restore remaining bits to send
 
@@ -184,7 +184,7 @@ sd_waitresult:
 
 sd_sendcommand:
   ; Debug print which command is being executed
-  jsr lcd_cleardisplay
+  jsr print_crlf
 
   lda #'c'
   jsr print_char
@@ -192,8 +192,14 @@ sd_sendcommand:
   lda (zp_sd_address,x)
   jsr print_hex
 
+  ; Supply some clock cycles before and after activating CS to ensure the sd card recognizes the change of CS.
+  ; See https://electronics.stackexchange.com/questions/303745/sd-card-initialization-problem-cmd8-wrong-response
+  lda #$ff
+  jsr sd_writebyte 
   lda #SD_MOSI           ; pull CS low to begin command
-  sta PORTA
+  sta PORTB
+  lda #$ff
+  jsr sd_writebyte 
 
   ldy #0
   lda (zp_sd_address),y    ; command byte
@@ -221,8 +227,14 @@ sd_sendcommand:
   jsr print_hex
 
   ; End command
+  ; Supply some clock cycles before and after deactivating CS to ensure the sd card recognizes the change of CS.
+  ; See https://electronics.stackexchange.com/questions/303745/sd-card-initialization-problem-cmd8-wrong-response
+  lda #$ff
+  jsr sd_writebyte 
   lda #SD_CS | SD_MOSI   ; set CS high again
-  sta PORTA
+  sta PORTB
+  lda #$ff
+  jsr sd_writebyte 
 
   pla   ; restore result code
   rts
@@ -235,8 +247,14 @@ sd_readsector:
   ;    zp_sd_currentsector   32-bit sector number
   ;    zp_sd_address     address of buffer to receive data
   
+  ; Supply some clock cycles before and after activating CS to ensure the sd card recognizes the change of CS.
+  ; See https://electronics.stackexchange.com/questions/303745/sd-card-initialization-problem-cmd8-wrong-response
+  lda #$ff
+  jsr sd_writebyte 
   lda #SD_MOSI
-  sta PORTA
+  sta PORTB
+  lda #$ff
+  jsr sd_writebyte 
 
   ; Command 17, arg is sector number, crc not checked
   lda #$51                    ; CMD17 - READ_SINGLE_BLOCK
@@ -268,8 +286,14 @@ sd_readsector:
   dec zp_sd_address+1
 
   ; End command
+  ; Supply some clock cycles before and after deactivating CS to ensure the sd card recognizes the change of CS.
+  ; See https://electronics.stackexchange.com/questions/303745/sd-card-initialization-problem-cmd8-wrong-response
+  lda #$ff
+  jsr sd_writebyte 
   lda #SD_CS | SD_MOSI
-  sta PORTA
+  sta PORTB
+  lda #$ff
+  jsr sd_writebyte 
 
   rts
 

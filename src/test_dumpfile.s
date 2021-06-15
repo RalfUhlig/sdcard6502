@@ -1,18 +1,20 @@
-  .org $e000
+  .org $0200
 
+  jmp reset
+  
   .include "hwconfig.s"
   .include "libsd.s"
   .include "libfat32.s"
-  .include "liblcd.s"
+  .include "libtty.s"
 
 
 zp_sd_address = $40         ; 2 bytes
 zp_sd_currentsector = $42   ; 4 bytes
 zp_fat32_variables = $46    ; 24 bytes
 
-fat32_workspace = $200      ; two pages
+fat32_workspace = $1000      ; two pages
 
-buffer = $400
+buffer = $1200
 
 
 subdirname:
@@ -21,12 +23,13 @@ filename:
   .asciiz "DEEPFILETXT"
 
 reset:
+  cld
   ldx #$ff
   txs
 
   ; Initialise
   jsr via_init
-  jsr lcd_init
+  jsr tty_init
   jsr sd_init
   jsr fat32_init
   bcc .initsuccess
@@ -84,31 +87,26 @@ reset:
   jsr fat32_file_read
 
 
-  ; Dump data to LCD
+  ; Dump data to TTY
 
-  jsr lcd_cleardisplay
+  jsr print_crlf
 
   ldy #0
 .printloop
   lda buffer,y
   jsr print_char
-
   iny
 
   cpy #16
   bne .not16
-  jsr lcd_setpos_startline1
+  ;jsr lcd_setpos_startline1
+  jsr print_crlf
 .not16
 
   cpy #32
   bne .printloop
 
-
-  ; loop forever
 loop:
-  jmp loop
+stop:
+  brk
 
-
-  .org $fffc
-  .word reset
-  .word $0000
